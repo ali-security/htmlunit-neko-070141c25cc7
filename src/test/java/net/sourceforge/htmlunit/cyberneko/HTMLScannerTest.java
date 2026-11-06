@@ -203,4 +203,48 @@ public class HTMLScannerTest extends TestCase {
             }
         }
     }
+
+    /**
+     * Regression test for an oom exception in versions < 2.60.
+     * @throws Exception
+     */
+    public void testInvalidProcessingInstruction() throws Exception {
+        final String string = "<!--?><?a/";
+
+        final HTMLConfiguration parser = new HTMLConfiguration();
+        final EvaluateInputSourceFilter filter = new EvaluateInputSourceFilter(parser);
+        parser.setProperty("http://cyberneko.org/html/properties/filters", new XMLDocumentFilter[] {filter});
+        final XMLInputSource source = new XMLInputSource(null, "myTest", null, new StringReader(string), "UTF-8");
+        parser.parse(source);
+
+        final String[] expected = {"(HTML", "(HEAD", ")HEAD", "(BODY", ")BODY", ")HTML"};
+        assertEquals(Arrays.asList(expected).toString(), filter.collectedStrings.toString());
+    }
+
+    /**
+     * Same as {@link #testInvalidProcessingInstruction()} but with a '?' right before the end of input.
+     * @throws Exception
+     */
+    public void testInvalidProcessingInstructionQuestionMark() throws Exception {
+        assertInvalidProcessingInstruction("<!--?><?a?");
+    }
+
+    /**
+     * Processing instruction ending with a '/' at the very end of the input.
+     * @throws Exception
+     */
+    public void testInvalidProcessingInstructionAtEndOfInput() throws Exception {
+        assertInvalidProcessingInstruction("<?a/");
+    }
+
+    private void assertInvalidProcessingInstruction(final String string) throws Exception {
+        final HTMLConfiguration parser = new HTMLConfiguration();
+        final EvaluateInputSourceFilter filter = new EvaluateInputSourceFilter(parser);
+        parser.setProperty("http://cyberneko.org/html/properties/filters", new XMLDocumentFilter[] {filter});
+        final XMLInputSource source = new XMLInputSource(null, "myTest", null, new StringReader(string), "UTF-8");
+        parser.parse(source);
+
+        final String[] expected = {"(HTML", "(HEAD", ")HEAD", "(BODY", ")BODY", ")HTML"};
+        assertEquals(Arrays.asList(expected).toString(), filter.collectedStrings.toString());
+    }
 }
